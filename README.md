@@ -1047,10 +1047,35 @@ In simple terms:
 * Composition → Part-of (dependent lifecycle)
 
 ---
+# 🔵 **Composition vs Inheritance – When to Choose What (Real Design Decision)**
+
+In real-world system design, the key decision is not whether you *can* use inheritance, but whether you *should*. Inheritance should be used only when there is a true **IS-A relationship** that will remain stable over time—for example, a `SavingsAccount` **is a** `BankAccount`, and its behavior will always align with that abstraction. However, inheritance creates **tight coupling**, meaning changes in the parent class can unintentionally affect all child classes, making the system rigid and harder to evolve. This is why modern design prefers **composition (HAS-A relationship)** in most cases, where behavior is reused by **injecting dependencies instead of extending classes**. For example, instead of creating a `LoggingBase` class and making all services extend it, you design a separate `Logger` component and use it as a field inside your service. This keeps your service independent and flexible.
+
+```java
+// Composition (preferred)
+class Logger {
+    void log(String msg) {
+        System.out.println("LOG: " + msg);
+    }
+}
+
+class OrderService {
+    private Logger logger = new Logger(); // HAS-A relationship
+
+    void placeOrder() {
+        logger.log("Order placed");
+        System.out.println("Processing order");
+    }
+}
+```
+
+Here, `OrderService` does not depend on a base class, so you can change logging behavior, replace it, or even remove it without affecting the service logic. This flexibility is why **composition is preferred in most real projects**, especially in Spring Boot where dependencies are injected. The rule of thumb is simple: use inheritance only when the relationship is truly stable and represents a clear hierarchy, but prefer composition when you want **flexibility, testability, and loose coupling**, which is what modern scalable systems require.
+
+---
 
 ## 🔵 **1. Understanding `super` in Java – A Beginner-Friendly Deep Dive**
 
-In Java, the keyword **`super`** is a **reference variable** that is used to refer to the **immediate parent class object**. It becomes relevant only when **inheritance (IS-A relationship)** is involved. Whenever a class extends another class, Java internally keeps a connection between the child and the parent, and `super` is the way the child class talks to its parent.
+In Java, the keyword **`super`** is a **reference variable** that is used to refer to the **immediate parent class object**. It becomes relevant only when **inheritance (IS-A relationship)** is involved. Whenever a class extends another class, Java maintains an internal connection between the child and the parent, and `super` is how the child class talks to its parent.
 
 Think of `super` as saying:
 👉 *“I want something from my parent class, not from myself.”*
@@ -4889,3 +4914,918 @@ They are essential because:
 * Simplify code with autoboxing/unboxing
 
 ---
+
+# 🔵 **1️⃣ Enum in Java – An OOP Perspective (More Than Just Constants)**
+
+In Java, an **enum (enumeration)** is not just a list of constants—it is actually a **full-fledged class**. This means an enum can have **fields, constructors, and methods**, just like any other class. The only difference is that enums are designed to represent a **fixed set of constants**, such as days of the week, directions, or states.
+
+From an Object-Oriented Programming perspective, enums provide a **type-safe way to define a group of related constants**, while still allowing behavior to be attached to them.
+
+Let’s start with a simple enum:
+
+```java
+enum Day {
+    MONDAY, TUESDAY, WEDNESDAY
+}
+```
+
+At first glance, it looks like just constants. But internally, each constant is actually an **object of the enum class**.
+
+---
+
+## 🟣 **2️⃣ Enums Are Full Classes – Fields, Methods, Constructors**
+
+Since enums are classes, we can add fields, constructors, and methods to them.
+
+```java
+enum Day {
+    MONDAY("Start of week"),
+    TUESDAY("Second day"),
+    WEDNESDAY("Mid week");
+
+    private String description;
+
+    // Constructor (always private or default)
+    Day(String description) {
+        this.description = description;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+}
+
+public class Main {
+    public static void main(String[] args) {
+        Day d = Day.MONDAY;
+        System.out.println(d.getDescription());
+    }
+}
+```
+
+Here:
+
+* Each enum constant has its own data
+* Constructor initializes values
+* Method provides behavior
+
+👉 This clearly shows enums behave like **objects with state and behavior**
+
+---
+
+## 🟢 **3️⃣ Enum Constructor Rules (Important)**
+
+Enum constructors are **always private (or default)**. You cannot make them public or protected.
+
+👉 Why?
+
+Because enum objects are created **only by the JVM**, not by developers. This ensures:
+
+* Fixed number of instances
+* No duplicate objects
+
+You cannot do this:
+
+```java
+// ❌ Not allowed
+Day d = new Day("Test");
+```
+
+---
+
+## 🟡 **4️⃣ Can Enum Implement Interface? (Interview Question ✅)**
+
+👉 **Yes, enums can implement interfaces.**
+
+This is very useful when you want enums to follow a contract.
+
+```java
+interface Operation {
+    int apply(int a, int b);
+}
+
+enum Calculator implements Operation {
+    ADD {
+        public int apply(int a, int b) {
+            return a + b;
+        }
+    },
+    MULTIPLY {
+        public int apply(int a, int b) {
+            return a * b;
+        }
+    };
+}
+
+public class Main {
+    public static void main(String[] args) {
+        System.out.println(Calculator.ADD.apply(5, 3));
+    }
+}
+```
+
+Here, each enum constant provides its own implementation.
+
+👉 This is **polymorphism using enums**.
+
+---
+
+## 🔴 **5️⃣ Can Enum Extend a Class? (Interview Question ❌)**
+
+👉 **No, enums cannot extend any class.**
+
+Reason:
+Every enum **implicitly extends `java.lang.Enum`**, so Java does not allow multiple inheritance.
+
+```java
+// Internally
+enum Day extends java.lang.Enum<Day>
+```
+
+👉 But enums can still:
+
+* Implement interfaces ✔️
+* Have methods ✔️
+* Override behavior ✔️
+
+---
+
+## 🔵 **6️⃣ values() and valueOf() – Auto-Generated Methods**
+
+Java automatically provides some useful methods for enums:
+
+### 🔹 values()
+
+Returns all enum constants:
+
+```java
+for (Day d : Day.values()) {
+    System.out.println(d);
+}
+```
+
+---
+
+### 🔹 valueOf()
+
+Converts string to enum:
+
+```java
+Day d = Day.valueOf("MONDAY");
+System.out.println(d);
+```
+
+👉 These methods are generated automatically by the compiler.
+
+---
+
+## 🟣 **7️⃣ Enum and Singleton Pattern (Very Important)**
+
+Enums provide the **safest and simplest way to implement Singleton** in Java.
+
+```java
+enum Singleton {
+    INSTANCE;
+
+    public void show() {
+        System.out.println("Singleton instance");
+    }
+}
+
+public class Main {
+    public static void main(String[] args) {
+        Singleton obj = Singleton.INSTANCE;
+        obj.show();
+    }
+}
+```
+
+👉 Why enum Singleton is best?
+
+* Thread-safe by default
+* Prevents reflection attacks
+* Prevents serialization issues
+* Only one instance exists
+
+👉 This is the **recommended way** in modern Java.
+
+---
+
+## 🟢 **8️⃣ Real-World Understanding**
+
+Think of enum like a **fixed set of objects**:
+
+* Days of week
+* Traffic signals
+* Order status
+
+But unlike simple constants, each value:
+
+* Is an object
+* Can have behavior
+* Can follow OOP principles
+
+---
+
+## 🟡 **9️⃣ Why Enums Are Powerful in OOP**
+
+Enums provide:
+
+* Type safety (no invalid values)
+* Built-in object behavior
+* Cleaner code than constants
+* Support for polymorphism
+* Safe Singleton implementation
+
+---
+
+# 🔵 **1️⃣ Inner Classes & Anonymous Classes in Java – Deep OOP Understanding**
+
+In Java, **inner classes** are classes defined inside another class. They are used to logically group related classes together and improve encapsulation. Depending on how and where they are defined, inner classes behave differently and have different memory and design implications.
+
+There are four main types:
+
+* Non-static inner class
+* Static nested class
+* Local class
+* Anonymous class
+
+Understanding these is very important, especially because concepts like **memory leaks and object references** are commonly asked in interviews.
+
+---
+
+## 🟣 **2️⃣ Non-Static Inner Class – Holds Reference to Outer Class**
+
+A **non-static inner class** is defined inside another class without the `static` keyword. The most important characteristic is that it **implicitly holds a reference to the outer class object**.
+
+This means:
+👉 Inner class object cannot exist without outer class object
+
+Let’s see an example:
+
+```java id="r6w4vl"
+class Outer {
+    int x = 10;
+
+    class Inner {
+        void display() {
+            System.out.println("Outer x: " + x);
+        }
+    }
+}
+
+public class Main {
+    public static void main(String[] args) {
+        Outer outer = new Outer();
+        Outer.Inner inner = outer.new Inner();
+
+        inner.display();
+    }
+}
+```
+
+Here, the inner class can directly access the outer class variable `x`.
+
+---
+
+### 🔴 **Memory Leak Risk (Very Important Interview Concept)**
+
+Because the inner class holds a reference to the outer class:
+
+* If the inner class object lives longer
+* It prevents the outer object from being garbage collected
+
+Example scenario:
+
+* Inner class used in long-running thread or listener
+* Outer object becomes unused but cannot be collected
+
+👉 This leads to **memory leaks**
+
+---
+
+## 🟢 **3️⃣ Static Nested Class – No Outer Reference**
+
+A **static nested class** is defined using the `static` keyword. Unlike non-static inner classes, it **does NOT hold a reference to the outer class instance**.
+
+```java id="e1xk3r"
+class Outer {
+    static int x = 20;
+
+    static class Nested {
+        void display() {
+            System.out.println("Outer x: " + x);
+        }
+    }
+}
+
+public class Main {
+    public static void main(String[] args) {
+        Outer.Nested nested = new Outer.Nested();
+        nested.display();
+    }
+}
+```
+
+👉 Key difference:
+
+* No outer object needed
+* No hidden reference
+* No memory leak risk
+
+Static nested classes behave almost like **normal top-level classes**, but are grouped inside another class for better organization.
+
+---
+
+## 🟡 **4️⃣ Local Class – Defined Inside a Method**
+
+A **local class** is defined inside a method and is only accessible within that method.
+
+```java id="92d4u8"
+class Outer {
+
+    void show() {
+        class Local {
+            void display() {
+                System.out.println("Inside local class");
+            }
+        }
+
+        Local l = new Local();
+        l.display();
+    }
+}
+```
+
+👉 Important points:
+
+* Scope limited to method
+* Cannot be accessed outside
+* Can access final or effectively final variables
+
+Local classes are rarely used but useful for **small, method-specific logic**.
+
+---
+
+## 🔴 **5️⃣ Anonymous Class – One-Time Use Implementation**
+
+An **anonymous class** is a class without a name, created and used in a single statement. It is commonly used when you need a **one-time implementation of an interface or abstract class**.
+
+```java id="3qhyba"
+interface Animal {
+    void sound();
+}
+
+public class Main {
+    public static void main(String[] args) {
+
+        Animal a = new Animal() {
+            public void sound() {
+                System.out.println("Dog barking");
+            }
+        };
+
+        a.sound();
+    }
+}
+```
+
+👉 Here:
+
+* No class name
+* Created and used instantly
+* Used for quick implementations
+
+---
+
+## 🔵 **6️⃣ Anonymous Class vs Lambda (Modern Java)**
+
+In modern Java, anonymous classes are often replaced by **lambda expressions**, especially for functional interfaces.
+
+```java id="3nx04r"
+// Anonymous class
+Runnable r1 = new Runnable() {
+    public void run() {
+        System.out.println("Running");
+    }
+};
+
+// Lambda (modern way)
+Runnable r2 = () -> System.out.println("Running");
+```
+
+👉 Lambda is:
+
+* Shorter
+* Cleaner
+* More readable
+
+But anonymous classes are still important for:
+
+* Non-functional interfaces
+* Interviews
+
+---
+
+## 🟣 **7️⃣ Key Difference – Inner Class Types**
+
+Each type serves a different purpose:
+
+* Non-static inner → tightly coupled with outer class
+* Static nested → independent, no outer reference
+* Local class → limited to method scope
+* Anonymous class → quick one-time implementation
+
+---
+
+## 🟢 **8️⃣ Real-World Understanding**
+
+Think of inner classes like **roles inside an organization**:
+
+* Non-static inner → Personal assistant (always tied to boss)
+* Static nested → Independent department
+* Local class → Temporary helper in a meeting
+* Anonymous class → Freelancer hired for one task
+
+---
+
+## 🟡 **9️⃣ Why This Topic is Important**
+
+This concept is important because:
+
+* Helps in better class design
+* Prevents memory leaks
+* Improves code organization
+* Used in frameworks and event handling
+
+---
+
+# 🔵 **SOLID Principles in Java – Real OOP Design for Experienced Developers (2–5 Years Level)**
+
+SOLID principles are a set of five design principles that help you write **clean, maintainable, scalable, and loosely coupled code**. These are not just theoretical concepts—interviewers expect you to **connect them with real project experience**, especially if you have worked on systems like Angular + Spring Boot (like your Nissan/Tech Mahindra work).
+
+Each principle focuses on reducing complexity and improving design quality. Let’s understand them deeply with practical intuition and code.
+
+---
+
+# 🟣 **1️⃣ SRP – Single Responsibility Principle (One Class, One Reason to Change)**
+
+The Single Responsibility Principle states that a class should have **only one responsibility**, meaning it should have **only one reason to change**.
+
+In real projects, this becomes very important. For example, if you combine business logic, database operations, and logging in one class, then any small change can affect everything. This makes the code hard to maintain.
+
+Let’s see a bad design:
+
+```java
+class UserService {
+    void saveUser() {
+        // business logic
+        System.out.println("Saving user");
+
+        // database logic
+        System.out.println("Saving to DB");
+
+        // logging
+        System.out.println("Logging info");
+    }
+}
+```
+
+Here, one class is doing multiple things.
+
+Now applying SRP:
+
+```java
+class UserService {
+    void processUser() {
+        System.out.println("Processing user");
+    }
+}
+
+class UserRepository {
+    void saveToDB() {
+        System.out.println("Saving to DB");
+    }
+}
+
+class LoggerService {
+    void log(String message) {
+        System.out.println(message);
+    }
+}
+```
+
+Now each class has a **single responsibility**.
+
+👉 In your project:
+
+* Angular component → UI logic
+* Service → business logic
+* Repository → DB interaction
+
+This separation is SRP in action.
+
+---
+
+# 🟢 **2️⃣ OCP – Open/Closed Principle (Open for Extension, Closed for Modification)**
+
+The Open/Closed Principle states that a class should be:
+👉 **Open for extension, but closed for modification**
+
+This means you should be able to add new functionality **without modifying existing code**.
+
+Bad example:
+
+```java
+class PaymentService {
+    void pay(String type) {
+        if (type.equals("UPI")) {
+            System.out.println("UPI payment");
+        } else if (type.equals("CARD")) {
+            System.out.println("Card payment");
+        }
+    }
+}
+```
+
+If a new payment type comes → you must modify this class ❌
+
+Now applying OCP:
+
+```java
+interface Payment {
+    void pay();
+}
+
+class UPI implements Payment {
+    public void pay() {
+        System.out.println("UPI payment");
+    }
+}
+
+class Card implements Payment {
+    public void pay() {
+        System.out.println("Card payment");
+    }
+}
+
+class PaymentService {
+    void process(Payment payment) {
+        payment.pay();
+    }
+}
+```
+
+Now you can add new payment types **without modifying existing code**.
+
+👉 In your project:
+
+* Adding new APIs or features without changing existing services
+* Using interfaces + new implementations
+
+---
+
+# 🟡 **3️⃣ LSP – Liskov Substitution Principle (Replace Parent with Child Safely)**
+
+LSP states that a **child class should be usable wherever the parent class is expected**, without breaking the program.
+
+This means inheritance should not change expected behavior.
+
+Bad example:
+
+```java
+class Bird {
+    void fly() {
+        System.out.println("Flying");
+    }
+}
+
+class Penguin extends Bird {
+    void fly() {
+        throw new RuntimeException("Cannot fly");
+    }
+}
+```
+
+Here, substituting Penguin breaks the program ❌
+
+Better design:
+
+```java
+class Bird {
+}
+
+interface Flyable {
+    void fly();
+}
+
+class Sparrow extends Bird implements Flyable {
+    public void fly() {
+        System.out.println("Flying");
+    }
+}
+
+class Penguin extends Bird {
+}
+```
+
+👉 Now substitution is safe.
+
+👉 In your experience:
+
+* If subclass changes behavior unexpectedly → violates LSP
+* Covariant return types also relate to safe substitution
+
+---
+
+# 🔴 **4️⃣ ISP – Interface Segregation Principle (Avoid Fat Interfaces)**
+
+ISP says:
+👉 Do not force a class to implement methods it does not need
+
+Bad example:
+
+```java
+interface Worker {
+    void work();
+    void eat();
+}
+
+class Robot implements Worker {
+    public void work() {
+        System.out.println("Working");
+    }
+
+    public void eat() {
+        // ❌ Not applicable
+    }
+}
+```
+
+Robot is forced to implement unnecessary method ❌
+
+Better design:
+
+```java
+interface Workable {
+    void work();
+}
+
+interface Eatable {
+    void eat();
+}
+
+class Human implements Workable, Eatable {
+    public void work() { }
+    public void eat() { }
+}
+
+class Robot implements Workable {
+    public void work() { }
+}
+```
+
+👉 In your project:
+
+* Avoid large service interfaces
+* Split into smaller focused interfaces
+
+---
+
+# 🔵 **5️⃣ DIP – Dependency Inversion Principle (Depend on Abstractions)**
+
+DIP states:
+👉 High-level modules should not depend on low-level modules
+👉 Both should depend on abstractions
+
+This is directly connected to **Dependency Injection (DI)**.
+
+Bad example:
+
+```java
+class MySQLDatabase {
+    void connect() {
+        System.out.println("Connected to MySQL");
+    }
+}
+
+class UserService {
+    private MySQLDatabase db = new MySQLDatabase();
+}
+```
+
+Here, UserService is tightly coupled ❌
+
+Better design:
+
+```java
+interface Database {
+    void connect();
+}
+
+class MySQLDatabase implements Database {
+    public void connect() {
+        System.out.println("MySQL connected");
+    }
+}
+
+class UserService {
+    private Database db;
+
+    UserService(Database db) {
+        this.db = db;
+    }
+}
+```
+
+👉 Now UserService depends on abstraction, not implementation
+
+---
+
+### 🔹 Spring Boot Real Example (Your Stack)
+
+```java
+@Autowired
+private UserRepository userRepository;
+```
+
+Here:
+
+* You depend on interface
+* Spring injects implementation
+
+👉 This is **DIP in real life**
+
+---
+
+# 🟣 **6️⃣ Real Interview Insight (Very Important)**
+
+When answering in interview, don’t just define—connect:
+
+* SRP → separate Angular components/services
+* OCP → add new features without modifying existing APIs
+* LSP → proper inheritance design
+* ISP → smaller interfaces in services
+* DIP → Spring @Autowired + interfaces
+
+---
+# 🔵 **1️⃣ Immutability in Java – Designing Thread-Safe Objects (Real Interview Concept)**
+
+Immutability means that **once an object is created, its state cannot be changed**. This concept is extremely important in Java because immutable objects are **thread-safe by default**, easy to reason about, and widely used in real-world systems (for example, `String`).
+
+In simple terms, an immutable object behaves like a **read-only value**. Once created, no one can modify it—only create a new object if changes are needed. This makes it very powerful in **multi-threaded environments**, which is why companies like Citibank focus on this concept.
+
+---
+
+# 🟣 **2️⃣ Why Immutability is Important (Real-World Understanding)**
+
+In real systems, multiple threads may access the same object at the same time. If the object is mutable, one thread might change it while another is reading it, leading to inconsistent data.
+
+Immutable objects solve this problem because:
+
+* Their state never changes
+* No synchronization is required
+* They are inherently thread-safe
+
+This is why classes like `String`, `Integer`, etc., are immutable.
+
+---
+
+# 🟢 **3️⃣ Rules to Create an Immutable Class (Core Design Recipe)**
+
+To design an immutable class, you must follow strict rules:
+
+* Declare the class as `final` → prevents inheritance
+* Make all fields `private final` → cannot be modified
+* Initialize fields through constructor
+* Do not provide setter methods
+* Return **defensive copies** for mutable objects
+
+Let’s implement a complete example.
+
+---
+
+# 🟡 **4️⃣ Example – Building an Immutable Class**
+
+```java
+final class Person {
+
+    private final String name;
+    private final int age;
+    private final java.util.Date dob; // mutable object
+
+    // Constructor initializes all fields
+    public Person(String name, int age, java.util.Date dob) {
+        this.name = name;
+        this.age = age;
+        // Defensive copy
+        this.dob = new java.util.Date(dob.getTime());
+    }
+
+    // Getters only (no setters)
+    public String getName() {
+        return name;
+    }
+
+    public int getAge() {
+        return age;
+    }
+
+    // Return defensive copy to prevent modification
+    public java.util.Date getDob() {
+        return new java.util.Date(dob.getTime());
+    }
+}
+```
+
+---
+
+## 🔴 **5️⃣ Why Defensive Copy is Important (Critical Concept)**
+
+Even if fields are `final`, if they refer to **mutable objects**, the internal state can still be changed.
+
+Bad example:
+
+```java
+public java.util.Date getDob() {
+    return dob; // ❌ exposing internal object
+}
+```
+
+Someone can do:
+
+```java
+person.getDob().setTime(0); // modifies internal state ❌
+```
+
+👉 This breaks immutability.
+
+Correct approach:
+
+```java
+return new Date(dob.getTime()); // ✔️ safe copy
+```
+
+Now external code cannot affect internal state.
+
+---
+
+# 🔵 **6️⃣ How Immutability Ensures Thread Safety**
+
+Because immutable objects:
+
+* Cannot change after creation
+* Do not share mutable state
+* Do not require locks
+
+Multiple threads can safely access them without synchronization.
+
+Example:
+
+```java
+String s = "Rabbani"; // immutable
+```
+
+Even if 100 threads use it, it remains unchanged.
+
+---
+
+# 🟣 **7️⃣ Real-World Usage in Your Projects**
+
+In real Spring Boot applications, immutability is used in:
+
+* DTOs (Data Transfer Objects)
+* Configuration classes
+* Response objects
+* Caching systems
+
+For example:
+
+```java
+final class UserDTO {
+    private final String name;
+    private final int age;
+
+    public UserDTO(String name, int age) {
+        this.name = name;
+        this.age = age;
+    }
+}
+```
+
+👉 No setters → safe to share across threads
+
+---
+
+# 🟢 **8️⃣ Interview-Level Answer (How You Should Explain)**
+
+If asked:
+
+👉 “How would you design an immutable class?”
+
+You should say naturally:
+
+> To create an immutable class, I make the class final, declare all fields as private final, initialize them through the constructor, and avoid setters. If the class contains mutable objects, I return defensive copies to prevent external modification. This ensures the object is thread-safe and cannot be changed after creation.
+
+---
+
